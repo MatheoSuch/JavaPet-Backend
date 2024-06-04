@@ -10,6 +10,8 @@ app.use(cors());
 
 app.use('/auth', require('./router/authRouter'));
 
+app.use('/admin', require('./router/adminRouter'));
+
 dbConnection();
 // app.use("/admin", require("./router/authRouter"));
 
