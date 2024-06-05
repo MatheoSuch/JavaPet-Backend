@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 const usuarioModel = require('../model/usuarioModel');
 const Usuario = require('../model/usuarioModel');
+var jwt = require('jsonwebtoken');
+const { token } = require('morgan');
 
 const crearUsuario = async (req, res) => {
 	const { name, email, password, edad } = req.body;
@@ -55,11 +57,25 @@ const loginUsuario = async (req, res) => {
 
 		const validarPassword = bcrypt.compareSync(password, usuario.password);
 		if (!validarPassword) {
-			msg: 'Algunos de los datos no son correctos';
+			return res.status(400).json({
+				msg: 'Algunos de los datos no son correctos',
+			});
 		}
+
+		const payload = {
+			name: usuario.name,
+			id: usuario.id,
+			rol: usuario.rol,
+		};
+
+		const token = jwt.sign(payload, process.env.SECRET_JWT, {
+			expiresIn: '2h',
+		});
+
 		res.status(200).json({
 			modal: 'success',
 			msg: 'Usuario logueado correctamente',
+			token,
 		});
 	} catch (error) {
 		res.status(500).json({

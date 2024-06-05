@@ -6,22 +6,23 @@ const {
 	listaTurnos,
 	editarTurno,
 } = require('../controllers/adminControllers');
+const validarJWT = require('../middlewares/validarJWT');
 const routerAdmin = express.Router();
 
-routerAdmin.post('/crearTurnos', crearTurnos);
+routerAdmin.post('/crearTurnos', validarJWT, crearTurnos);
 
-routerAdmin.get('/listaTurnos', listaTurnos);
+routerAdmin.get('/listaTurnos', validarJWT, listaTurnos);
 
-routerAdmin.put('/editarTurno', editarTurno);
+routerAdmin.put('/editarTurno', validarJWT, editarTurno);
 
-routerAdmin.delete('/eliminarTurno/:id', eliminarTurno);
+routerAdmin.delete('/eliminarTurno/:id', validarJWT, eliminarTurno);
 
-// routerAdmin.post('/crearPaciente', crearPaciente);
+// routerAdmin.post('/crearPaciente',validarJWT, crearPaciente);
 
-routerAdmin.get('/listaPacientes', listaPacientes);
+routerAdmin.get('/listaPacientes', validarJWT, listaPacientes);
 
-// routerAdmin.put('/editarPaciente', editarPaciente);
+// routerAdmin.put('/editarPaciente',validarJWT, editarPaciente);
 
-// routerAdmin.delete('/eliminarPaciente', eliminarPaciente);
+// routerAdmin.delete('/eliminarPaciente',validarJWT, eliminarPaciente);
 
 module.exports = routerAdmin;
