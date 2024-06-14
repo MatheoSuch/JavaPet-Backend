@@ -1,91 +1,89 @@
 const bcrypt = require('bcrypt');
-const usuarioModel = require('../model/usuarioModel');
+const jwt = require('jsonwebtoken');
 const Usuario = require('../model/usuarioModel');
-var jwt = require('jsonwebtoken');
-const { token } = require('morgan');
 
-const crearUsuario = async (req, res) => {
-	const { name, email, password, edad } = req.body;
+const registro = async (req, res) => {
+	const { nombre, apellido, email, telefono, password, confirmPassword } = req.body;
 
-	if (!name || !email || !password || !edad) {
+	if (!nombre || !email || !password || !apellido || !telefono || !confirmPassword) {
+		return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
+	} else if (password < 5) {
 		return res.status(400).json({
-			msg: 'Todos los campos son obligatorios',
+			msg: ' la contraseña debe ser mayor a 5 caracteres',
 		});
-		// regex
+	} else if (password !== confirmPassword) {
+		return res.status(400).json({
+			msg: 'Las contraseñas debe ser iguales',
+		});
 	}
+	// regex
+
 	try {
 		// analizar correo
-		let usuario = await usuarioModel.findOne({ email });
+		let usuario = await Usuario.findOne({ email });
 		if (usuario) {
 			return res.status(400).json({
 				msg: 'El correo ya existe',
 			});
 		}
 		// caso que no exista correo
-		usuario = new Usuario(req.body);
+		const nuevoUsuario = new Usuario(req.body);
 		// Encriptar contraseña antes de guardarlo en base de datos
 		const salt = bcrypt.genSaltSync(10);
-		usuario.password = bcrypt.hashSync(password, salt);
+		nuevoUsuario.password = bcrypt.hashSync(password, salt);
 		// guardamos datos en base de datos
-		await usuario.save();
+		await nuevoUsuario.save();
 		res.status(201).json({
-			msg: 'Usuario registado',
+			msg: 'Usuario registrado exitosamente',
 		});
 	} catch (error) {
+		console.log(error);
 		res.status(500).json({
 			msg: 'Por favor contactese con un administrador',
 		});
 	}
 };
-
-const loginUsuario = async (req, res) => {
+const login = async (req, res) => {
 	const { email, password } = req.body;
 
-	if (!email || !password) {
-		return res.status(400).json({
-			msg: 'Todos los campos son obligatorios',
-		});
-		// regex
-	}
 	try {
-		let usuario = await usuarioModel.findOne({ email });
+		// Buscar al paciente por su email
+		const usuario = await Usuario.findOne({ email: email });
 		if (!usuario) {
-			return res.status(400).json({
-				msg: 'Algunos de los datos no son correctos',
-			});
+			return res
+				.status(400)
+				.json({ msg: 'Correo electrónico o contraseña incorrectos' });
 		}
 
-		const validarPassword = bcrypt.compareSync(password, usuario.password);
+		// Verificar la contraseña del paciente
+		const validarPassword = await bcrypt.compare(password, usuario.password);
 		if (!validarPassword) {
-			return res.status(400).json({
-				msg: 'Algunos de los datos no son correctos',
-			});
+			return res
+				.status(400)
+				.json({ msg: 'Correo electrónico o contraseña incorrectos' });
 		}
 
+		// Generar un token de autenticación
 		const payload = {
-			name: usuario.name,
-			id: usuario.id,
+			id: usuario._id,
+			name: usuario.nombre,
+			apellido: usuario.apellido,
 			rol: usuario.rol,
 		};
+		const token = jwt.sign(payload, process.env.SECRET_JWT, { expiresIn: '2h' });
 
-		const token = jwt.sign(payload, process.env.SECRET_JWT, {
-			expiresIn: '2h',
-		});
-
-		res.status(200).json({
-			modal: 'success',
-			msg: 'Usuario logueado correctamente',
+		return res.status(200).json({
+			msg: 'Usuario Logueado',
+			type: 'success',
 			token,
 		});
 	} catch (error) {
-		res.status(500).json({
-			msg: 'Por favor contactese con un administrador',
-		});
-		console.log(error);
+		console.error('Error al autenticar paciente:', error);
+		res.status(500).json({ msg: 'Error interno del servidor' });
 	}
 };
 
 module.exports = {
-	crearUsuario,
-	loginUsuario,
+	registro,
+	login,
 };
