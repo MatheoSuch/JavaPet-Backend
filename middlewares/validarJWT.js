@@ -8,18 +8,18 @@ const validarJWT = (req, res, next) => {
 			msg: 'No existe un token',
 		});
 	}
+
 	try {
 		const payload = jwt.verify(token, process.env.SECRET_JWT);
 		req.payload = payload;
-		next();
+		next(); // Llama a next solo si todo está correcto
 	} catch (error) {
-		console.log(error);
+		console.error('Error al verificar token:', error);
 		return res.status(401).json({
-			msg: 'La sesión expiró',
+			msg: 'La sesión expiró o el token es inválido',
 			type: 'error',
 		});
 	}
-	next();
 };
 
 module.exports = validarJWT;

@@ -7,31 +7,33 @@ const registro = async (req, res) => {
 
 	if (!nombre || !email || !password || !apellido || !telefono || !confirmPassword) {
 		return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
-	} else if (password < 5) {
+	} else if (password.length < 5) {
 		return res.status(400).json({
-			msg: ' la contraseña debe ser mayor a 5 caracteres',
+			msg: 'La contraseña debe tener más de 5 caracteres',
 		});
 	} else if (password !== confirmPassword) {
 		return res.status(400).json({
-			msg: 'Las contraseñas debe ser iguales',
+			msg: 'Las contraseñas deben ser iguales',
 		});
 	}
-	// regex
 
 	try {
-		// analizar correo
+		// Verificar si el correo ya existe
 		let usuario = await Usuario.findOne({ email });
 		if (usuario) {
 			return res.status(400).json({
 				msg: 'El correo ya existe',
 			});
 		}
-		// caso que no exista correo
-		const nuevoUsuario = new Usuario(req.body);
-		// Encriptar contraseña antes de guardarlo en base de datos
-		const salt = bcrypt.genSaltSync(10);
-		nuevoUsuario.password = bcrypt.hashSync(password, salt);
-		// guardamos datos en base de datos
+		// Crear nuevo usuario
+		const nuevoUsuario = new Usuario({
+			nombre,
+			apellido,
+			email,
+			telefono,
+			password: bcrypt.hashSync(password, bcrypt.genSaltSync(10)),
+		});
+		// Guardar usuario en la base de datos
 		await nuevoUsuario.save();
 		res.status(201).json({
 			msg: 'Usuario registrado exitosamente',
@@ -43,11 +45,12 @@ const registro = async (req, res) => {
 		});
 	}
 };
+
 const login = async (req, res) => {
 	const { email, password } = req.body;
 
 	try {
-		// Buscar al paciente por su email
+		// Buscar al usuario por su email
 		const usuario = await Usuario.findOne({ email: email });
 		if (!usuario) {
 			return res
@@ -55,7 +58,7 @@ const login = async (req, res) => {
 				.json({ msg: 'Correo electrónico o contraseña incorrectos' });
 		}
 
-		// Verificar la contraseña del paciente
+		// Verificar la contraseña del usuario
 		const validarPassword = await bcrypt.compare(password, usuario.password);
 		if (!validarPassword) {
 			return res
@@ -78,7 +81,7 @@ const login = async (req, res) => {
 			token,
 		});
 	} catch (error) {
-		console.error('Error al autenticar paciente:', error);
+		console.error('Error al autenticar usuario:', error);
 		res.status(500).json({ msg: 'Error interno del servidor' });
 	}
 };
