@@ -1,10 +1,11 @@
 const { crearTurno } = require('../helpers/turnosService');
 const Usuarios = require('../model/usuarioModel');
 const Turnos = require('../model/turnoModel');
+const isValidEmail = require('../middlewares/validarEmial');
+const bcrypt = require('bcrypt');
 
 const listaPacientes = async (req, res) => {
 	try {
-		// Excluye los campos "__v" y "password"
 		const pacientes = await Usuarios.find().select('-__v -password');
 		res.status(200).json({
 			listaPacientes: pacientes,
@@ -18,36 +19,31 @@ const listaPacientes = async (req, res) => {
 };
 
 const crearPaciente = async (req, res) => {
-	const { nombre, apellido, email, telefono } = req.body;
+	const { nombre, apellido, email, telefono, password } = req.body;
 
 	try {
-		if (!nombre || !apellido || !email || !telefono) {
+		if (!nombre || !apellido || !email || !telefono || !password) {
 			return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
 		}
-		// Verificar si el correo electrónico tiene un formato válido
-		if (!isValidEmail(Usuarios.email)) {
+		if (!isValidEmail(email)) {
 			return res.status(400).json({ msg: 'El correo electrónico no es válido' });
 		}
-		// Verificar si ya existe un paciente con el mismo email
 		let pacienteExistente = await Usuarios.findOne({ email: email });
 		if (pacienteExistente) {
 			return res
 				.status(400)
 				.json({ msg: 'El correo electrónico ya está registrado' });
 		}
-		// Crear un nuevo paciente con los datos proporcionados
+		const hashedPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+
 		const nuevoPaciente = new Usuarios({
 			nombre,
 			apellido,
 			email,
 			telefono,
+			password: hashedPassword,
 		});
-		// Encriptar la contraseña del paciente
-		// if (password) {
-		// 	const salt = bcrypt.genSaltSync(10);
-		// 	dueno.password = bcrypt.hashSync(dueno.password, salt);
-		// }
-		// Guardar el nuevo paciente en la base de datos
+
 		await nuevoPaciente.save();
 		res.status(201).json({
 			msg: 'Paciente creado exitosamente',
@@ -61,38 +57,75 @@ const crearPaciente = async (req, res) => {
 
 const editarPaciente = async (req, res) => {
 	try {
-		const editarPaciente = await Usuarios.findById(req.body._id);
-		if (!editarPaciente) {
-			return res.status(400).json({
+		const { nombre, apellido, email, telefono, password, rol } = req.body;
+		const { id } = req.params;
+
+		console.log('ID del paciente recibido:', id);
+		console.log('Datos recibidos para editar paciente:', req.body);
+
+		const pacienteExistente = await Usuarios.findById(id);
+		if (!pacienteExistente) {
+			return res.status(404).json({
 				msg: 'No existe ningún paciente con ese id',
 			});
 		}
-		await Usuarios.findByIdAndUpdate(req.body._id, req.body);
+
+		const emailExistente = await Usuarios.findOne({ email });
+		if (emailExistente && emailExistente._id.toString() !== id) {
+			return res.status(400).json({
+				msg: 'El correo electrónico ya está en uso por otro paciente',
+			});
+		}
+		pacienteExistente.nombre = nombre;
+		pacienteExistente.apellido = apellido;
+		pacienteExistente.email = email;
+		pacienteExistente.telefono = telefono;
+		pacienteExistente.rol = rol;
+
+		if (password) {
+			const salt = await bcrypt.genSalt(10);
+			pacienteExistente.password = await bcrypt.hash(password, salt);
+		}
+
+		const pacienteActualizado = await pacienteExistente.save();
 		res.status(200).json({
 			msg: 'Paciente editado correctamente',
+			paciente: pacienteActualizado,
 		});
 	} catch (error) {
+		console.error('Error al editar paciente:', error);
+		let errorMsg =
+			'Error en el servidor al intentar editar el paciente. Por favor, contacte con un administrador';
+		if (error.message.includes('bcrypt')) {
+			errorMsg = 'Error al encriptar la contraseña';
+		}
 		res.status(500).json({
-			msg: 'Contactese con un administrador',
+			msg: errorMsg,
+			error: error.message,
 		});
 	}
 };
 
 const eliminarPaciente = async (req, res) => {
 	try {
-		const eliminarPaciente = await Usuarios.findById(req.params.id);
-		if (!eliminarPaciente) {
-			return res.status(400).json({
+		const paciente = await Usuarios.findById(req.params.id);
+
+		if (!paciente) {
+			return res.status(404).json({
 				msg: 'No existe ningún paciente con ese id',
 			});
 		}
+
 		await Usuarios.findByIdAndDelete(req.params.id);
+
 		res.status(200).json({
 			msg: 'Paciente eliminado correctamente',
 		});
 	} catch (error) {
+		console.error('Error al eliminar paciente:', error);
 		res.status(500).json({
-			msg: 'Contactese con un administrador',
+			msg: 'Error interno del servidor al intentar eliminar el paciente',
+			error: error.message,
 		});
 	}
 };
@@ -115,7 +148,6 @@ const listaTurnos = async (req, res) => {
 const crearTurnos = async (req, res) => {
 	const { detalleCita, veterinario, mascota, especie, raza, fecha, hora } = req.body;
 
-	// Log de los datos recibidos
 	console.log('Datos recibidos:', req.body);
 
 	try {
@@ -133,7 +165,8 @@ const crearTurnos = async (req, res) => {
 				msg: 'Todos los campos son obligatorios',
 			});
 		}
-		if (!detalleCita || detalleCita.length < 10 || detalleCita.length > 200) {
+
+		if (detalleCita.length < 10 || detalleCita.length > 200) {
 			console.log('Error: Detalle de la cita incorrecto');
 			return res.status(400).json({
 				msg: 'El detalle de la cita debe tener entre 10 y 200 caracteres',
@@ -141,29 +174,46 @@ const crearTurnos = async (req, res) => {
 		}
 
 		const veterinariosDefinidos = ['Dr. Sanchez Alejo', 'Dra. Gonzáles Camila'];
-		if (!veterinario || !veterinariosDefinidos.includes(veterinario)) {
+		if (!veterinariosDefinidos.includes(veterinario)) {
 			console.log('Error: Veterinario no disponible');
 			return res.status(400).json({
 				msg: 'Debe seleccionar uno de los veterinarios disponibles',
 			});
 		}
 
-		if (!mascota || mascota.length < 2 || mascota.length > 30) {
+		if (mascota.length < 2 || mascota.length > 30) {
 			console.log('Error: Nombre de la mascota incorrecto');
 			return res.status(400).json({
 				msg: 'El nombre de la mascota debe tener entre 2 y 30 caracteres',
 			});
-		} else if (!especie || especie.length < 2 || especie.length > 30) {
+		}
+
+		if (especie.length < 2 || especie.length > 30) {
 			console.log('Error: Especie de la mascota incorrecta');
 			return res.status(400).json({
 				msg: 'La especie de la mascota debe tener entre 2 y 30 caracteres',
 			});
-		} else if (!raza || raza.length < 2 || raza.length > 30) {
+		}
+
+		if (raza.length < 2 || raza.length > 30) {
 			console.log('Error: Raza de la mascota incorrecta');
 			return res.status(400).json({
 				msg: 'La raza de la mascota debe tener entre 2 y 30 caracteres',
 			});
 		}
+
+		// Parsear la fecha y hora correctamente
+		const turnoFechaHora = new Date(`${fecha}T${hora}`);
+
+		// Validar la fecha y hora
+		if (isNaN(turnoFechaHora.getTime())) {
+			console.log('Error: Fecha y/o hora inválidas');
+			return res.status(400).json({
+				msg: 'La fecha y/o hora son inválidas',
+			});
+		}
+
+		// Buscar un turno existente con el mismo veterinario, fecha y hora
 
 		const resultado = await crearTurno(
 			detalleCita,
@@ -185,7 +235,7 @@ const crearTurnos = async (req, res) => {
 		console.log('Turno creado exitosamente');
 		res.status(201).json({
 			msg: 'Turno creado',
-			turno: resultado.turno,
+			turno: {},
 		});
 	} catch (error) {
 		console.log('Error en el servidor:', error);
@@ -216,15 +266,17 @@ const eliminarTurno = async (req, res) => {
 
 const editarTurno = async (req, res) => {
 	try {
-		const turnoEditar = await Turnos.findById(req.body._id);
+		console.log('ID del turno recibido:', req.params.id);
+		console.log('Datos recibidos para editar:', req.body);
+
+		const turnoEditar = await Turnos.findById(req.params.id);
 		if (!turnoEditar) {
 			return res.status(404).json({
 				msg: 'No existe ningún turno con ese id',
 			});
 		}
 
-		// Aquí se actualiza el turno con los datos recibidos en req.body
-		await Turnos.findByIdAndUpdate(req.body._id, req.body);
+		await Turnos.findByIdAndUpdate(req.params.id, req.body);
 
 		res.status(200).json({
 			msg: 'Turno editado correctamente',
@@ -233,6 +285,7 @@ const editarTurno = async (req, res) => {
 		console.error('Error al editar turno:', error);
 		res.status(500).json({
 			msg: 'Error en el servidor al intentar editar el turno. Por favor, contacte con un administrador',
+			error: error.message,
 		});
 	}
 };

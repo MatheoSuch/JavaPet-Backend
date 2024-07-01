@@ -18,14 +18,13 @@ const registro = async (req, res) => {
 	}
 
 	try {
-		// Verificar si el correo ya existe
 		let usuario = await Usuario.findOne({ email });
 		if (usuario) {
 			return res.status(400).json({
 				msg: 'El correo ya existe',
 			});
 		}
-		// Crear nuevo usuario
+
 		const nuevoUsuario = new Usuario({
 			nombre,
 			apellido,
@@ -33,7 +32,7 @@ const registro = async (req, res) => {
 			telefono,
 			password: bcrypt.hashSync(password, bcrypt.genSaltSync(10)),
 		});
-		// Guardar usuario en la base de datos
+
 		await nuevoUsuario.save();
 		res.status(201).json({
 			msg: 'Usuario registrado exitosamente',

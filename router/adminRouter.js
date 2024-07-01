@@ -32,15 +32,15 @@ routerAdmin.post(
 	crearPaciente
 );
 
-routerAdmin.put('/editarPaciente', validarJWT, editarPaciente);
+routerAdmin.put('/editarPaciente/:id', validarJWT, editarPaciente);
 
-routerAdmin.delete('/eliminarPaciente', validarJWT, eliminarPaciente);
+routerAdmin.delete('/eliminarPaciente/:id', validarJWT, eliminarPaciente);
 
 routerAdmin.get('/listaTurnos', validarJWT, listaTurnos);
 
 routerAdmin.post('/crearTurnos', validarJWT, crearTurnos);
 
-routerAdmin.put('/editarTurno', validarJWT, editarTurno);
+routerAdmin.put('/editarTurno/:id', validarJWT, editarTurno);
 
 routerAdmin.delete('/eliminarTurno/:id', validarJWT, eliminarTurno);
 
