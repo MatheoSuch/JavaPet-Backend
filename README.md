@@ -1,6 +1,6 @@
 ![image](https://github.com/user-attachments/assets/2c2ac0af-9cac-415f-992b-9ff9d0385b6f)# 🐾 JavaPet Backend 🐾
 
-![JavaPet Logo]((https://drive.google.com/file/d/1nCjyPxCxWJ4nDRnBc1TUDmrDfGXdwEHQ/view?usp=sharing)) 
+![JavaPet Logo](https://github.com/MatheoSuch/JavaPet-Frontend/blob/dev/src/assets/Logo.png) 
 
 ## 🚀 Descripción
 
