@@ -15,5 +15,5 @@ app.use('/admin', require('./router/adminRouter'));
 dbConnection();
 
 app.listen(process.env.PORT, () => {
-	console.log(`Escuchando puerto ${process.env.PORT}`);
+	console.info(`Escuchando puerto ${process.env.PORT}`);
 });

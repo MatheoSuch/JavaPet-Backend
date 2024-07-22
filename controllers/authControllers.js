@@ -1,17 +1,32 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Usuario = require('../model/usuarioModel');
+const isValidEmail = require('../middlewares/validarEmail');
 
 const registro = async (req, res) => {
 	const { nombre, apellido, email, telefono, password, confirmPassword } = req.body;
 
 	if (!nombre || !email || !password || !apellido || !telefono || !confirmPassword) {
 		return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
-	} else if (password.length < 5) {
+	}
+
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	if (!emailRegex.test(email)) {
+		return res.status(400).json({ msg: 'El email no es válido' });
+	}
+
+	const phoneRegex = /^\d{10}$/;
+	if (!phoneRegex.test(telefono)) {
+		return res.status(400).json({ msg: 'El teléfono debe tener 10 dígitos' });
+	}
+
+	if (password.length < 5) {
 		return res.status(400).json({
 			msg: 'La contraseña debe tener más de 5 caracteres',
 		});
-	} else if (password !== confirmPassword) {
+	}
+
+	if (password !== confirmPassword) {
 		return res.status(400).json({
 			msg: 'Las contraseñas deben ser iguales',
 		});
@@ -38,7 +53,6 @@ const registro = async (req, res) => {
 			msg: 'Usuario registrado exitosamente',
 		});
 	} catch (error) {
-		console.log(error);
 		res.status(500).json({
 			msg: 'Por favor contactese con un administrador',
 		});
@@ -48,8 +62,14 @@ const registro = async (req, res) => {
 const login = async (req, res) => {
 	const { email, password } = req.body;
 
+	if (!email || !password) {
+		return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
+	}
+	if (!isValidEmail(email)) {
+		return res.status(400).json({ msg: 'El correo electrónico no es válido' });
+	}
+
 	try {
-		// Buscar al usuario por su email
 		const usuario = await Usuario.findOne({ email: email });
 		if (!usuario) {
 			return res
@@ -57,7 +77,6 @@ const login = async (req, res) => {
 				.json({ msg: 'Correo electrónico o contraseña incorrectos' });
 		}
 
-		// Verificar la contraseña del usuario
 		const validarPassword = await bcrypt.compare(password, usuario.password);
 		if (!validarPassword) {
 			return res
@@ -65,22 +84,21 @@ const login = async (req, res) => {
 				.json({ msg: 'Correo electrónico o contraseña incorrectos' });
 		}
 
-		// Generar un token de autenticación
 		const payload = {
 			id: usuario._id,
 			name: usuario.nombre,
 			apellido: usuario.apellido,
 			rol: usuario.rol,
 		};
-		const token = jwt.sign(payload, process.env.SECRET_JWT, { expiresIn: '2h' });
+		const token = jwt.sign(payload, process.env.SECRET_JWT, { expiresIn: '1h' });
 
 		return res.status(200).json({
 			msg: 'Usuario Logueado',
 			type: 'success',
 			token,
+			rol: usuario.rol,
 		});
 	} catch (error) {
-		console.error('Error al autenticar usuario:', error);
 		res.status(500).json({ msg: 'Error interno del servidor' });
 	}
 };

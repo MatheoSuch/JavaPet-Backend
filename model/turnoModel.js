@@ -4,32 +4,48 @@ const TurnosSchema = Schema(
 	{
 		detalleCita: {
 			type: String,
-			required: true,
+			required: [true, 'El detalle de la cita es obligatorio'],
+			maxlength: [500, 'El detalle de la cita no puede exceder los 500 caracteres'],
 		},
 		veterinario: {
 			type: String,
-			required: true,
-			enum: ['Dr. Sanchez Alejo', 'Dra. Gonzáles Camila'],
+			required: [true, 'El veterinario es obligatorio'],
+			enum: {
+				values: ['Dr. Sanchez Alejo', 'Dra. Gonzáles Camila'],
+				message: '{VALUE} no es un veterinario válido',
+			},
 		},
 		mascota: {
 			type: String,
-			required: true,
+			required: [true, 'El nombre de la mascota es obligatorio'],
+			maxlength: [
+				100,
+				'El nombre de la mascota no puede exceder los 100 caracteres',
+			],
 		},
 		especie: {
 			type: String,
-			required: true,
+			required: [true, 'La especie es obligatoria'],
+			maxlength: [50, 'La especie no puede exceder los 50 caracteres'],
 		},
 		raza: {
 			type: String,
-			required: true,
+			required: [true, 'La raza es obligatoria'],
+			maxlength: [50, 'La raza no puede exceder los 50 caracteres'],
 		},
 		fecha: {
 			type: Date,
-			required: true,
+			required: [true, 'La fecha es obligatoria'],
+			validate: {
+				validator: function (v) {
+					return v > new Date();
+				},
+				message: 'La fecha debe ser una fecha futura',
+			},
 		},
 		hora: {
 			type: String,
-			required: true,
+			required: [true, 'La hora es obligatoria'],
 			validate: {
 				validator: function (v) {
 					return /([01]?[0-9]|2[0-3]):[0-5][0-9]/.test(v);
@@ -39,7 +55,6 @@ const TurnosSchema = Schema(
 		},
 	},
 	{ timestamps: true }
-	// Registra horario y fecha de la creación
 );
 
 module.exports = model('Turnos', TurnosSchema);
