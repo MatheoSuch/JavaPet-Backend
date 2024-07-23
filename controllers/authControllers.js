@@ -103,7 +103,15 @@ const login = async (req, res) => {
 	}
 };
 
+const validarToken = (req, res) => {
+	res.status(200).json({
+		msg: 'Token válido',
+		payload: req.payload,
+	});
+};
+
 module.exports = {
 	registro,
 	login,
+	validarToken,
 };
