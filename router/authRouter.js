@@ -2,6 +2,7 @@ const express = require('express');
 const { registro, login } = require('../controllers/authControllers');
 const { check } = require('express-validator');
 const { validarCampos } = require('../middlewares/validarCampos');
+const { validarJWT } = require('../middlewares/validarJWT');
 const routerAuth = express.Router();
 
 routerAuth.post(
@@ -27,5 +28,9 @@ routerAuth.post(
 	],
 	login
 );
+
+routerAuth.get('/verify-token', validarJWT, (req, res) => {
+	res.status(200).json({ message: 'Token válido' });
+});
 
 module.exports = routerAuth;
